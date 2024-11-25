@@ -166,19 +166,3 @@ When deploying to production:
 - `.env` file is excluded from version control
 - Example configuration is provided in `.env.example`
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Copy `.env.example` to `.env` and configure your local environment
-4. Commit your changes
-5. Push to the branch
-6. Create a new Pull Request
-
-## License
-
-[Your License Here]
-
-## Support
-
-For support, please [create an issue](your-repository-issues-url) in the repository.
