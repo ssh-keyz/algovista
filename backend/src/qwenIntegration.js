@@ -12,13 +12,6 @@ async function processEquationWithQWEN(equation) {
 
   try {
     console.log('Sending request to LM Studio...');
-    // const response = await axios.post(API_URL, {
-    //   messages: [
-    //     { role: "user", content: `Solve the following calculus problem step by step:\n${equation}` }
-    //   ],
-    //   temperature: 0.7,
-    //   max_tokens: -1
-    // }, {
     const response = await axios.post(API_URL, {
       messages: [
         { role: "user", content: `You are the world's greatest calculus tutor, known for your clear and detailed step-by-step solutions. Your task is to solve calculus problems with precision and clarity. Follow these instructions:
@@ -29,11 +22,13 @@ async function processEquationWithQWEN(equation) {
    - "solution": An array of step objects, each containing:
      * "step": A sequential integer starting from 1
      * "action": A brief description of the mathematical operation performed
-     * "equation": The resulting equation or expression after the action (in LaTeX format)
-     * "explanation": A concise explanation of the step (may include LaTeX expressions)
+     * "equation": The resulting equation or expression in LaTeX format (DO NOT include $ or $$ delimiters)
+     * "explanation": A concise explanation of the step (write LaTeX expressions without $ or $$ delimiters)
    - "final_answer": The final result (in LaTeX format)
-4. Use LaTeX notation for all mathematical expressions, surrounded by $ for inline math and $$ for display math.
-5. Ensure both your response and all LaTeX is valid JSON. \\n${equation}` }
+4. Write all mathematical expressions in LaTeX notation WITHOUT any surrounding delimiters.
+5. Ensure all LaTeX expressions are properly escaped for JSON.
+6. Your response must be valid JSON that can be parsed directly.
+ Now solve this problem:\\n${equation}` }
       ],
       temperature: 0.7,
       max_tokens: -1
@@ -102,3 +97,4 @@ function removeJsonMarker(text) {
 }
 
 module.exports = { processEquationWithQWEN };
+
