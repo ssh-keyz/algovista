@@ -1,7 +1,10 @@
+require('dotenv').config();
+
 const axios = require('axios');
 
+const API_URL = process.env.QWEN_API_URL;
+
 // const API_URL = 'http://localhost:1234/v1/chat/completions'; // Updated to use port 1234
-const API_URL = 'https://rocky.otter-hamal.ts.net/v1/chat/completions'; // Updated to use port 1234
 
 async function processEquationWithQWEN(equation) {
   console.log(`Attempting to process equation: ${equation}`);
