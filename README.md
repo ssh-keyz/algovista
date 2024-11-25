@@ -1,70 +1,144 @@
-# Getting Started with Create React App
+# AlgoVista: AI-Driven Mathematical Solution Visualization
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Research Overview
 
-## Available Scripts
+AlgoVista represents an innovative approach to mathematical education through the integration of Large Language Models (LLMs) and structured mathematical markup generation. This project serves as both a practical educational tool and a research platform for exploring the challenges and solutions in AI-driven mathematical content generation.
 
-In the project directory, you can run:
+## Key Research Contributions
 
-### `npm start`
+1. **Structured AI Output Generation**
+   - Implementation of custom grammar systems for reliable JSON-structured markup
+   - Novel approach to ensuring consistent LaTeX/MathJax syntax generation
+   - Mitigation strategies for AI hallucination in mathematical contexts
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+2. **Mathematical Markup Processing**
+   - Integration of MathJax and LaTeX within React components
+   - Solutions to tokenization challenges in React state management
+   - Comparative analysis of MathML and ChatML in AI latent space
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+3. **AI Model Integration**
+   - QWEN model integration with custom prompting strategies
+   - Split testing methodology for mathematical markup generation
+   - Exception safety through secondary AI model validation
 
-### `npm test`
+## Technical Architecture
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Frontend ([Details](/frontend))
+- React-based UI with dark mode interface
+- Real-time mathematical visualization using Recharts
+- KaTeX integration for LaTeX rendering
+- Responsive solution step visualization
 
-### `npm run build`
+### Backend ([Details](/backend))
+- Express.js server with QWEN LLM integration
+- Structured JSON response handling
+- Environmental configuration for security
+- REST API endpoints for mathematical processing
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Research Findings
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Structured Grammar Importance
+The project demonstrates the critical nature of structured grammar in AI-driven applications, particularly when:
+- Handling specialized markup like LaTeX/MathJax
+- Ensuring consistent AI output formatting
+- Managing complex state in React applications
+- Processing mathematical notation with absolute precision
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### AI Model Behavior
+Key observations about AI model behavior in mathematical contexts:
+1. Hallucination patterns in mathematical markup generation
+2. Impact of prompt engineering on output structure
+3. Reliability improvements through structured JSON enforcement
+4. Trade-offs between flexibility and consistency in AI responses
 
-### `npm run eject`
+### Implementation Challenges
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. **Mathematical Parsing**
+   - Complex syntax handling
+   - Token management in React
+   - LaTeX validation and correction
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2. **AI Integration**
+   - Output structure maintenance
+   - Error handling and recovery
+   - Performance optimization
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+3. **User Interface**
+   - Real-time rendering
+   - State management
+   - Responsive design
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Project Structure
+```
+algovista/
+├── frontend/           # React-based UI
+├── backend/            # Express.js server
+└── research/          # Documentation and research findings
+```
 
-## Learn More
+## Getting Started
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. Clone the repository:
+```bash
+clone the repo
+cd algovista
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+2. Set up the backend:
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm start
+```
 
-### Code Splitting
+3. Set up the frontend:
+```bash
+cd ../frontend
+cp .env.example .env
+npm install
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Research Applications
 
-### Analyzing the Bundle Size
+This project serves as a foundation for:
+1. Studying AI-driven mathematical content generation
+2. Exploring structured output enforcement in LLMs
+3. Analyzing mathematical markup processing in modern web applications
+4. Investigating AI hallucination mitigation strategies
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Future Research Directions
 
-### Making a Progressive Web App
+1. **Model Optimization**
+   - Quantization methods for mobile deployment
+   - Alternative build systems for React
+   - Performance optimization strategies
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+2. **AI Validation**
+   - Secondary model validation approaches
+   - Hallucination detection methods
+   - Output structure verification
 
-### Advanced Configuration
+3. **Mathematical Processing**
+   - Enhanced LaTeX generation
+   - Improved tokenization strategies
+   - Advanced visualization techniques
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Contributing
 
-### Deployment
+We welcome contributions to both the practical application and research aspects of this project. Please see our [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Publications
 
-### `npm run build` fails to minify
+This project serves as the foundation for our upcoming paper:
+"Structured Grammar Approaches in AI-Driven Mathematical Content Generation: A Case Study of AlgoVista"
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Acknowledgments
+
+This project builds upon research in:
+- AI-driven content generation
+- Mathematical markup processing
+- React application architecture
+- LLM integration strategies
+
