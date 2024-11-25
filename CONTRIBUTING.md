@@ -26,7 +26,7 @@ We're excited that you're interested in contributing to AlgoVista! This document
    - Fork the AlgoVista repository to your GitHub account
    - Clone your fork locally
    ```bash
-   git clone https://github.com/yourusername/algovista.git
+   git clone this repo
    cd algovista
    ```
 
