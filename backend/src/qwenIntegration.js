@@ -1,20 +1,53 @@
 require('dotenv').config();
-
 const axios = require('axios');
+const NodeCache = require('node-cache');
 
+// Cache configuration
+const equationCache = new NodeCache({
+  stdTTL: 86400, // 24 hour cache
+  checkperiod: 3600, // Cleanup every hour
+  maxKeys: 1000 // Prevent unlimited growth
+});
+
+// Constants
+const DEFAULT_TIMEOUT = 30000;
+const MAX_RETRIES = 2;
 const API_URL = process.env.QWEN_API_URL;
 
-// const API_URL = 'http://localhost:1234/v1/chat/completions'; // Updated to use port 1234
+// Standardize equation to use as cache key
+function standardizeEquation(equation) {
+  return equation.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+// Retry mechanism with exponential backoff
+async function retryWithBackoff(operation, retries = MAX_RETRIES) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      const delay = Math.min(1000 * Math.pow(2, i), 10000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
 
 async function processEquationWithQWEN(equation) {
-  console.log(`Attempting to process equation: ${equation}`);
-  console.log(`Using API URL: ${API_URL}`);
+  const cacheKey = standardizeEquation(equation);
+  console.log(`Processing equation: ${equation}`);
+
+  // Check cache first
+  const cachedResult = equationCache.get(cacheKey);
+  if (cachedResult) {
+    console.log('Cache hit for equation');
+    return cachedResult;
+  }
 
   try {
-    console.log('Sending request to LM Studio...');
-    const response = await axios.post(API_URL, {
-      messages: [
-        { role: "user", content: `You are the world's greatest calculus tutor, known for your clear and detailed step-by-step solutions. Your task is to solve calculus problems with precision and clarity. Follow these instructions:
+    const response = await retryWithBackoff(async () => {
+      return axios.post(API_URL, {
+        messages: [
+          { role: "user", content: `You are the world's greatest calculus tutor, known for your clear and detailed step-by-step solutions. Your task is to solve calculus problems with precision and clarity. Follow these instructions:
 
 1. Analyze the given calculus problem carefully.
 2. Provide a step-by-step solution, ensuring no steps are skipped.
@@ -29,72 +62,68 @@ async function processEquationWithQWEN(equation) {
 5. Ensure all LaTeX expressions are properly escaped for JSON.
 6. Your response must be valid JSON that can be parsed directly.
  Now solve this problem:\\n${equation}` }
-      ],
-      temperature: 0.7,
-      max_tokens: -1
-    }, {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      timeout: 300000 // 30 second timeout
+        ],
+        temperature: 0.7,
+        max_tokens: -1
+      }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: DEFAULT_TIMEOUT
+      });
     });
 
-    console.log('Received response from LM Studio');
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-    console.log('Raw response data:', response.data);
-
-    if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
-      console.log('Raw response content:', response.data.choices[0].message.content);
-
-      // Parse the JSON from the response content
-      let jsonResponse;
-      try {
-        jsonResponse = removeJsonMarker(response.data.choices[0].message.content);
-        jsonResponse = JSON.parse(jsonResponse);
-        // jsonResponse = JSON.parse(response.data.choices[0].message.content);
-        // jsonResponse = parseQWENResponse(response);
-        console.log('Parsed JSON response:', jsonResponse);
-      } catch (parseError) {
-        console.error('Error parsing JSON response:', parseError);
-        throw new Error('Invalid JSON response from LM Studio');
-      }
-
-      return JSON.stringify(jsonResponse);
-    } else {
-      console.error('Unexpected response structure:', response.data);
-      throw new Error('Unexpected response structure from L M Studio');
+    if (!response.data?.choices?.[0]?.message) {
+      throw new Error('Invalid response structure');
     }
+
+    const jsonResponse = parseAndValidateResponse(response.data.choices[0].message.content);
+    
+    // Cache the successful response
+    equationCache.set(cacheKey, JSON.stringify(jsonResponse));
+    
+    return JSON.stringify(jsonResponse);
+
   } catch (error) {
-    console.error('Error processing equation:', error);
-    if (error.response) {
-      console.error('Error response data:', error.response.data);
-      console.error('Error response status:', error.response.status);
-      console.error('Error response headers:', error.response.headers);
-    } else if (error.request) {
-      console.error('No response received:', error.request);
-    } else {
-      console.error('Error setting up request:', error.message);
-    }
-    console.error('Error config:', error.config);
-
-    return JSON.stringify({
-      solution: [
-        {
-          step: 1,
-          action: "Error occurred",
-          equation: "N/A",
-          explanation: `An error occurred while processing the equation: ${error.message}. Please ensure LM Studio is running and try again.`
-        }
-      ],
-      final_answer: "Unable to process the equation due to an error."
+    console.error('Error processing equation:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
     });
+
+    // Return graceful error response
+    const errorResponse = {
+      solution: [{
+        step: 1,
+        action: "Error occurred",
+        equation: "N/A",
+        explanation: `Error: ${error.message}. Please try again.`
+      }],
+      final_answer: "Processing error"
+    };
+
+    return JSON.stringify(errorResponse);
   }
 }
 
-function removeJsonMarker(text) {
-  return text.replace(/```json|```/g, '');
+function parseAndValidateResponse(content) {
+  const cleanContent = content.replace(/```json|```/g, '').trim();
+  try {
+    const parsed = JSON.parse(cleanContent);
+    
+    // Validate required fields
+    if (!Array.isArray(parsed.solution) || !parsed.final_answer) {
+      throw new Error('Invalid response structure');
+    }
+    
+    return parsed;
+  } catch (error) {
+    throw new Error(`JSON parsing failed: ${error.message}`);
+  }
 }
 
-module.exports = { processEquationWithQWEN };
+module.exports = { 
+  processEquationWithQWEN,
+  // Expose for testing
+  standardizeEquation,
+  parseAndValidateResponse
+};
 
