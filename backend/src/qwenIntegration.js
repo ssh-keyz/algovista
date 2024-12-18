@@ -10,7 +10,7 @@ const equationCache = new NodeCache({
 });
 
 // Constants
-const DEFAULT_TIMEOUT = 30000;
+const DEFAULT_TIMEOUT = 60000;
 const MAX_RETRIES = 2;
 const API_URL = process.env.QWEN_API_URL;
 
@@ -60,10 +60,10 @@ async function processEquationWithQWEN(equation) {
    - "final_answer": The final result (in LaTeX format)
 4. Write all mathematical expressions in LaTeX notation WITHOUT any surrounding delimiters.
 5. Ensure all LaTeX expressions are properly escaped for JSON.
-6. Your response must be valid JSON that can be parsed directly.
+6. Your response must be valid JSON that can be parsed directly. 
  Now solve this problem:\\n${equation}` }
         ],
-        temperature: 0.7,
+        temperature: 0.8,
         max_tokens: -1
       }, {
         headers: { 'Content-Type': 'application/json' },

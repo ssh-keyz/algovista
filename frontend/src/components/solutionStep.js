@@ -38,7 +38,7 @@ const styles = {
 
 const SolutionStep = ({ step, action, equation, explanation }) => {
   const renderExplanation = (text) => {
-    const parts = text.split(/(\$.*?\$)/);
+    const parts = text ? text.split(/(\$.*?\$)/) : [''];
     return parts.map((part, index) => {
       if (part.startsWith('$') && part.endsWith('$')) {
         return <InlineMath key={index} math={part.slice(1, -1)} />;
@@ -62,5 +62,57 @@ const SolutionStep = ({ step, action, equation, explanation }) => {
   );
 };
 
+// const optimizedRenderExplanation = ({ step, action, equation, explanation }) => {
+//   const renderExplanation = (text) => {
+//     const parts = text ? text.split(/(\$.*?\$)/) : [''];
+//     return parts.map((part, index) => {
+//       if (part.startsWith('$') && part.endsWith('$')) {
+//         return <InlineMath key={index} math={part.slice(1, -1)} />;
+//       }
+//       return part;
+//     });
+//   };
 
-export default SolutionStep;
+//   return (
+//     <div style={styles.stepContainer}>
+//       <div style={styles.stepHeader}>
+//         <h2 style={styles.stepTitle}>Step {step}: {action}</h2>
+//       </div>
+//       <div style={styles.stepContent}>
+//         <div style={styles.label}>Equation:</div>
+//         <BlockMath math={equation} />
+//         <div style={styles.label}>Explanation:</div>
+//         <div style={styles.text}>{renderExplanation(explanation)}</div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// const originalRenderExplanation = ({ step, action, equation, explanation }) => {
+//   const renderExplanation = (text) => {
+//     const parts = text ? text.split(/(\$.*?\$)/) : [''];
+//     return parts.map((part, index) => {
+//       if (part.startsWith('$') && part.endsWith('$')) {
+//         return <InlineMath key={index} math={part.slice(1, -1)} />;
+//       }
+//       return part;
+//     });
+//   };
+
+//   return (
+//     <div style={styles.stepContainer}>
+//       <div style={styles.stepHeader}>
+//         <h2 style={styles.stepTitle}>Step {step}: {action}</h2>
+//       </div>
+//       <div style={styles.stepContent}>
+//         <div style={styles.label}>Equation:</div>
+//         <BlockMath math={equation} />
+//         <div style={styles.label}>Explanation:</div>
+//         <div style={styles.text}>{renderExplanation(explanation)}</div>
+//       </div>
+//     </div>
+//   );
+// };
+// export { SolutionStep, originalRenderExplanation, optimizedRenderExplanation };
+
+export default SolutionStep; 

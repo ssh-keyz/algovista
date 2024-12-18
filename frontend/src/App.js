@@ -7,10 +7,13 @@ import { BlockMath } from 'react-katex';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 import SolutionStep from './components/solutionStep.js';
+// import { runPerformanceComparison } from './__tests__/benchmarks/runBenchmarks.js';
+import { Cache } from './services/cache';
+// import { Benchmark } from './__tests__/benchmarks/Benchmark.js';
 
 const styles = {
   container: {
-    maxWidth: '800px',
+    maxWidth: '1200px',
     margin: '0 auto',
     padding: '20px',
     fontFamily: 'Arial, sans-serif',
@@ -192,6 +195,13 @@ function App() {
     final_answer: "f(x) = x^2 \\text{ is a quadratic function representing an upward-opening parabola centered at the origin.}"
 
   });
+  const [cache] = useState(() => new Cache({
+    ttl: 1800000, // 30 minutes
+    maxSize: 500,
+    persistToStorage: true,
+    prefix: 'math_'
+  }));
+
   const generateGraphData = (func) => {
     const data = [];
     for (let x = -10; x <= 10; x += 0.5) {
@@ -206,7 +216,13 @@ function App() {
     return data;
   };
   useEffect(() => {
-    const funcString = equation.split('=')[1].trim();
+    let funcString = '';
+    try {
+      funcString = equation.split('=')[1].trim();
+    } catch (error) {
+      console.error('Error parsing equation:', error);
+      funcString = 'x'; // Default to simple linear function
+    }
     const data = generateGraphData(funcString);
     setGraphData(data);
   }, [equation]);
@@ -215,14 +231,25 @@ function App() {
   const handleSolve = async (e) => {
     e.preventDefault();
     try {
+      // Check cache first
+      const cachedSolution = await cache.get(equation);
+      if (cachedSolution) {
+        setSolution(cachedSolution);
+        setIsPopupOpen(true);
+        return;
+      }
+
       const response = await axios.post("http://localhost:3000/api/solve", {
         equation,
       });
       console.log("Raw response:", response.data);
 
-      // Parse the JSON string in the response
-      // const parsedSolution = JSON.parse(response.data['solution'][0]);
-      setSolution(parseResponse(response.data));
+      const parsedSolution = parseResponse(response.data);
+      setSolution(parsedSolution);
+      
+      // Store in cache
+      await cache.set(equation, parsedSolution);
+      
       setIsPopupOpen(true);
     } catch (error) {
       console.error("Error:", error);
@@ -232,6 +259,21 @@ function App() {
   const togglePopup = () => {
     setIsPopupOpen(!isPopupOpen);
   };
+
+  // const runBenchmarkWithCache = async () => {
+  //   const benchmark = new Benchmark();
+  //   const testEquation = equation;
+
+  //   console.log('Running benchmark with cache...');
+  //   const result = await benchmark.runBenchmarkSuite({
+  //     equation: testEquation,
+  //     cache
+  //   });
+
+  //   console.log('Benchmark results:', result);
+  //   console.log('Cache statistics:', cache.getStats());
+  // };
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>AlgoVista Math Solver</h1>
@@ -261,171 +303,10 @@ function App() {
         </div>
         {solution && <CalculusSolutionDisplay solution={solution} />}
       </PopupWindow>
+      {/* <button onClick={runBenchmarkWithCache}>Run Performance Comparison</button> */}
     </div>
   );
 }
 
 
 export default App;
-//
-// import React, { useState, useEffect } from 'react';
-// import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-// import { BlockMath } from 'react-katex';
-// import axios from 'axios';
-// import 'katex/dist/katex.min.css';
-//
-// const MathSolver = () => {
-//   const [equation, setEquation] = useState("f(x) = x^2");
-//   const [graphData, setGraphData] = useState([]);
-//   const [error, setError] = useState(null);
-//   const [isPopupOpen, setIsPopupOpen] = useState(false);
-//   const [solution, setSolution] = useState(null);
-//
-//   const parseEquation = (eqString) => {
-//     try {
-//       // Handle empty or invalid input
-//       if (!eqString || typeof eqString !== 'string') {
-//         throw new Error('Invalid equation format');
-//       }
-//
-//       // Check if equation contains '='
-//       const parts = eqString.split('=');
-//       if (parts.length !== 2) {
-//         throw new Error('Equation must contain exactly one equals sign');
-//       }
-//
-//       const rightSide = parts[1].trim();
-//       // Return the parsed expression
-//       return rightSide
-//           .replace(/\^/g, '**')  // Convert ^ to **
-//           .replace(/x/g, 'x')    // Ensure x is lowercase
-//           .replace(/\s/g, '');   // Remove spaces
-//     } catch (err) {
-//       throw new Error('Could not parse equation: ' + err.message);
-//     }
-//   };
-//
-//   const generateGraphData = (functionString) => {
-//     try {
-//       const parsedFunc = parseEquation(functionString);
-//       const data = [];
-//
-//       for (let x = -10; x <= 10; x += 0.5) {
-//         try {
-//           // Safely evaluate the function using Function constructor
-//           const safeFunction = new Function('x', `return ${parsedFunc}`);
-//           const y = safeFunction(x);
-//
-//           // Only add valid numerical results
-//           if (!isNaN(y) && isFinite(y)) {
-//             data.push({ x, y });
-//           }
-//         } catch (error) {
-//           console.warn(`Skip point at x=${x}: ${error.message}`);
-//         }
-//       }
-//
-//       setError(null);
-//       return data;
-//     } catch (err) {
-//       setError(err.message);
-//       return [];
-//     }
-//   };
-//
-//   useEffect(() => {
-//     try {
-//       const data = generateGraphData(equation);
-//       setGraphData(data);
-//     } catch (err) {
-//       setError(err.message);
-//       setGraphData([]);
-//     }
-//   }, [equation]);
-//
-//   const handleSolve = async (e) => {
-//     e.preventDefault();
-//     setError(null);
-//
-//     try {
-//       const response = await axios.post("http://localhost:3000/api/solve", {
-//         equation,
-//       });
-//
-//       if (response.data) {
-//         setSolution(parseResponse(response.data));
-//         setIsPopupOpen(true);
-//       } else {
-//         throw new Error('Invalid response from server');
-//       }
-//     } catch (err) {
-//       setError(err.message);
-//       setSolution(null);
-//     }
-//   };
-//
-//   return (
-//       <div className="w-full max-w-4xl mx-auto p-6 bg-gray-900 min-h-screen text-gray-100">
-//         <h1 className="text-4xl font-bold mb-6 text-center text-cyan-400">
-//           AlgoVista Math Solver
-//         </h1>
-//
-//         {error && (
-//             <div className="mb-4 p-4 bg-red-900/50 border border-red-500 rounded-lg">
-//               <p className="text-red-300">{error}</p>
-//             </div>
-//         )}
-//
-//         <form onSubmit={handleSolve} className="flex gap-2 mb-6">
-//           <input
-//               type="text"
-//               value={equation}
-//               onChange={(e) => setEquation(e.target.value)}
-//               placeholder="Enter equation (e.g. f(x) = x^2)"
-//               className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-l-lg text-gray-100"
-//           />
-//           <button
-//               type="submit"
-//               className="px-6 py-2 bg-cyan-500 text-gray-900 rounded-r-lg hover:bg-cyan-400 transition-colors"
-//           >
-//             Solve
-//           </button>
-//         </form>
-//
-//         <div className="mb-6 bg-gray-800 p-4 rounded-lg">
-//           <h2 className="text-xl font-semibold mb-4 text-cyan-400">Function Graph</h2>
-//           <ResponsiveContainer width="100%" height={300}>
-//             <LineChart data={graphData}>
-//               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-//               <XAxis dataKey="x" stroke="#9CA3AF" />
-//               <YAxis stroke="#9CA3AF" />
-//               <Tooltip
-//                   contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-//                   labelStyle={{ color: '#9CA3AF' }}
-//               />
-//               <Line type="monotone" dataKey="y" stroke="#06B6D4" dot={false} />
-//             </LineChart>
-//           </ResponsiveContainer>
-//         </div>
-//
-//         {solution && (
-//             <div className="bg-gray-800 p-4 rounded-lg">
-//               <h2 className="text-xl font-semibold mb-4 text-cyan-400">Solution</h2>
-//               {solution.solution.map((step, index) => (
-//                   <div key={index} className="mb-4 p-4 bg-gray-900 rounded-lg">
-//                     <h3 className="font-medium text-cyan-400">Step {step.step}: {step.action}</h3>
-//                     <BlockMath math={step.equation} />
-//                     <p className="mt-2 text-gray-300">{step.explanation}</p>
-//                   </div>
-//               ))}
-//               <div className="mt-6 pt-4 border-t border-gray-700">
-//                 <h3 className="font-semibold text-cyan-400">Final Answer:</h3>
-//                 <BlockMath math={solution.final_answer} />
-//               </div>
-//             </div>
-//         )}
-//       </div>
-//   );
-// };
-//
-// export default MathSolver;
