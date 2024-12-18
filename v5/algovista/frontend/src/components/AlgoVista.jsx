@@ -132,42 +132,88 @@ const VisualizationDisplay = ({ visualizationData }) => {
 };
 
 const AlgoVista = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({ solve: false, visualize: false });
   const [error, setError] = useState(null);
   const [solution, setSolution] = useState(null);
   const [visualization, setVisualization] = useState(null);
 
   const handleEquationSubmit = async (formData) => {
-    setLoading(true);
     setError(null);
+    setSolution(null);
+    setVisualization(null);
+    setLoading({ solve: true, visualize: false });
 
     try {
+      // First call solve endpoint
+      const solveResponse = await fetch('/api/solve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      }).catch(err => ({ ok: false, error: err }));
+
+      // Handle solve response
+      if (solveResponse.ok) {
+        try {
+          const solveData = await solveResponse.json();
+          if (!solveData || !Array.isArray(solveData.solution)) {
+            throw new Error('Invalid solution data received');
+          }
+          setSolution(solveData);
+        } catch (err) {
+          console.error('Error parsing solve data:', err);
+          setError(prev => ({ 
+            ...prev, 
+            solve: 'Failed to process solution data' 
+          }));
+        }
+      } else {
+        console.error('Solve request failed:', solveResponse.error || 'Unknown error');
+        setError(prev => ({ 
+          ...prev, 
+          solve: 'Failed to get solution' 
+        }));
+      }
+      setLoading(prev => ({ ...prev, solve: false, visualize: true }));
+
+      // Then call visualize endpoint
       const visualizeResponse = await fetch('/api/visualize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
-      });
+      }).catch(err => ({ ok: false, error: err }));
 
-      if (!visualizeResponse.ok) {
-        const errorData = await visualizeResponse.json();
-        throw new Error(errorData.message || 'Failed to process equation');
+      // Handle visualize response
+      if (visualizeResponse.ok) {
+        try {
+          const visualizeData = await visualizeResponse.json();
+          if (!visualizeData || !visualizeData.function) {
+            throw new Error('Invalid visualization data received');
+          }
+          setVisualization(visualizeData);
+        } catch (err) {
+          console.error('Error parsing visualization data:', err);
+          setError(prev => ({ 
+            ...prev, 
+            visualize: 'Failed to process visualization data' 
+          }));
+        }
+      } else {
+        console.error('Visualize request failed:', visualizeResponse.error || 'Unknown error');
+        setError(prev => ({ 
+          ...prev, 
+          visualize: 'Failed to get visualization' 
+        }));
       }
+      setLoading(prev => ({ ...prev, visualize: false }));
 
-      const visualizeData = await visualizeResponse.json();
-      console.log("Visualization data:", visualizeData);
-      
-      if (!visualizeData || !visualizeData.function) {
-        throw new Error('Invalid visualization data received');
-      }
-
-      setVisualization(visualizeData);
     } catch (err) {
-      setError(err.message);
       console.error('Error details:', err);
-    } finally {
-      setLoading(false);
+      setError({ general: 'Failed to process request' });
+      setLoading({ solve: false, visualize: false });
     }
   };
 
@@ -179,15 +225,33 @@ const AlgoVista = () => {
 
         {/* Error Display */}
         {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="space-y-2 mb-6">
+            {error.general && (
+              <Alert variant="destructive">
+                <AlertDescription>{error.general}</AlertDescription>
+              </Alert>
+            )}
+            {error.solve && (
+              <Alert variant="destructive">
+                <AlertDescription>{error.solve}</AlertDescription>
+              </Alert>
+            )}
+            {error.visualize && (
+              <Alert variant="destructive">
+                <AlertDescription>{error.visualize}</AlertDescription>
+              </Alert>
+            )}
+          </div>
         )}
 
         {/* Loading State */}
-        {loading && (
+        {(loading.solve || loading.visualize) && (
           <div className="text-center py-4">
-            <div className="text-gray-600">Processing your equation...</div>
+            <div className="text-gray-600">
+              {loading.solve && "Processing solution..."}
+              {loading.solve && loading.visualize && " and "}
+              {loading.visualize && "generating visualization..."}
+            </div>
           </div>
         )}
 
@@ -195,12 +259,12 @@ const AlgoVista = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column - Solution Steps */}
           <Container>
-            {/* <SolutionDisplay solution={solution} /> */}
+            {!loading.solve && solution && <SolutionDisplay solution={solution} />}
           </Container>
 
           {/* Right Column - Visualization */}
           <Container>
-            <VisualizationDisplay visualizationData={visualization} />
+            {!loading.visualize && visualization && <VisualizationDisplay visualizationData={visualization} />}
           </Container>
         </div>
       </div>

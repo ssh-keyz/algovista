@@ -9,6 +9,10 @@ const axios = require('axios');
 const solveSchema = require('./schemas/solve-schema.json');
 const visualizeSchemas = require('./schemas/visualization-schemas.json');
 const { 
+  generateVisualizationFormat,
+  generateSolveFormat 
+} = require('./schemas/qwen-formats.js');
+const { 
   errorHandler, 
   notFoundHandler, 
   rateLimitHandler 
@@ -20,8 +24,51 @@ dotenv.config();
 
 const app = express();
 const QWEN_API_ENDPOINT = process.env.QWEN_API_ENDPOINT;
-const DEFAULT_TIMEOUT = 70000; // 30 seconds
-const MAX_RETRIES = 1;
+const DEFAULT_TIMEOUT = 600000; // 10 minutes
+const AXIOS_TIMEOUT = 600000; // 10 minutes for axios calls
+const MAX_RETRIES = 2;
+
+// Queue for managing QWEN API requests
+let isProcessing = false;
+const requestQueue = [];
+
+// Function to process the queue
+async function processQueue() {
+  if (isProcessing || requestQueue.length === 0) return;
+  
+  isProcessing = true;
+  const { operation, resolve, reject } = requestQueue.shift();
+  
+  try {
+    const result = await operation();
+    resolve(result);
+  } catch (error) {
+    reject(error);
+  } finally {
+    isProcessing = false;
+    // Process next request if any
+    processQueue();
+  }
+}
+
+// Wrapper for QWEN API calls to use queue
+async function queueQwenRequest(operation) {
+  return new Promise((resolve, reject) => {
+    requestQueue.push({ operation, resolve, reject });
+    processQueue();
+  });
+}
+
+// Configure express with increased timeout and limits
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Set server timeout (practically infinite for development)
+app.use((req, res, next) => {
+  req.setTimeout(DEFAULT_TIMEOUT);
+  res.setTimeout(DEFAULT_TIMEOUT);
+  next();
+});
 
 // Validate required environment variables
 if (!QWEN_API_ENDPOINT) {
@@ -37,8 +84,8 @@ async function retryWithBackoff(operation, maxRetries = MAX_RETRIES) {
       return await operation();
     } catch (error) {
       lastError = error;
-      const delay = Math.min(1000 * Math.pow(2, i), 100000); // Max 10 second delay
-      console.log(`Attempt ${i + 1} failed, retrying in ${delay}ms...`);
+      const delay = Math.min(1000 * Math.pow(2, i), 10000); // Max 10 second delay
+      console.log(`Attempt ${i + 1} failed, retrying in ${delay}ms...`, error.message);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -60,220 +107,52 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-const generateResponseFormat = (jsonFile) => {
-  // Determine which schema type we're dealing with
-  let schemaName;
-  let baseSchema;
-  
-  if (jsonFile.title === "Mathematical Solution State") {
-    schemaName = "math_solution_response";
-    baseSchema = {
-      type: "object",
-      properties: {
-        solution: jsonFile.properties.solution,
-        final_answer: jsonFile.properties.final_answer
-      },
-      required: jsonFile.required
-    };
-  } else if (jsonFile.title === "LaTeX Templates") {
-    schemaName = "latex_template_response";
-    baseSchema = {
-      type: "object",
-      properties: {
-        templates: {
-          type: "object",
-          properties: jsonFile.properties
-        }
-      },
-      required: ["templates"]
-    };
-  } else if (jsonFile.title === "Visualization Schemas") {
-    schemaName = "visualization_response";
-    baseSchema = {
-      type: "object",
-      properties: {
-        visualization: jsonFile.properties.visualization_schemas
-      },
-      required: ["visualization"]
-    };
-  } else {
-    throw new Error("Unsupported schema type");
-  }
-
-  return {
-    type: "json_schema",
-    json_schema: {
-      name: schemaName,
-      strict: "true",
-      schema: baseSchema
-    }
-  };
-};
-
 // Helper function for API calls
-async function callQwenAPI(prompt, schema, systemMessage = null) {
-  const generateVisualizationFormat = () => {
-    return {
-      type: "json_schema",
-      json_schema: {
-        name: "visualization_response",
-        strict: "true",
-        schema: {
-          type: "object",
-          properties: {
-            function: {
-              type: "object",
-              properties: {
-                raw: { type: "string" },
-                parsed: { type: "string" },
-                variables: { 
-                  type: "array",
-                  items: { type: "string" }
-                }
-              },
-              required: ["raw", "parsed", "variables"]
-            },
-            visualization_config: {
-              type: "object",
-              properties: {
-                ranges: {
-                  type: "object",
-                  properties: {
-                    x: { type: "array", items: { type: "number" }},
-                    y: { type: "array", items: { type: "number" }},
-                    z: { type: "array", items: { type: "number" }}
-                  }
-                },
-                resolution: {
-                  type: "object",
-                  properties: {
-                    x: { type: "integer" },
-                    y: { type: "integer" }
-                  }
-                },
-                view_angles: {
-                  type: "object",
-                  properties: {
-                    theta: { type: "number" },
-                    phi: { type: "number" }
-                  }
-                }
-              },
-              required: ["ranges", "resolution", "view_angles"]
-            },
-            mathematical_properties: {
-              type: "object",
-              properties: {
-                critical_points: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      x: { type: "number" },
-                      y: { type: "number" },
-                      z: { type: "number" },
-                      type: { type: "string" }
-                    }
-                  }
-                },
-                gradient: {
-                  type: "object",
-                  properties: {
-                    dx: { type: "string" },
-                    dy: { type: "string" }
-                  }
-                }
-              }
-            }
-          },
-          required: ["function", "visualization_config", "mathematical_properties"]
-        }
+async function callQwenAPI(prompt, schemaType, systemMessage = null) {
+  const operation = async () => {
+    try {
+      const response_format = schemaType === 'solve' ? generateSolveFormat() : generateVisualizationFormat();
+      const messages = [];
+      if (systemMessage) {
+        messages.push({ role: 'system', content: systemMessage });
       }
-    };
-  };
-  
-  // const response_format = generateResponseFormat(schema);
-  const response_format = generateVisualizationFormat();
-  // const response_format = {
-  //   "type": "json_schema",
-  //   "json_schema": {
-  //     "name": "visualization_response",
-  //     "strict": "true",
-  //     "schema": {
-  //       "type": "object",
-  //       "properties": {
-  //         "function": {
-  //           "type": "object",
-  //           "properties": {
-  //             "raw": { "type": "string" },
-  //             "parsed": { "type": "string" },
-  //             "variables": { 
-  //               "type": "array",
-  //               "items": { "type": "string" }
-  //             }
-  //           },
-  //           "required": ["raw", "parsed", "variables"]
-  //         }
-  //       },
-  //       "required": ["function"]
-  //     }
-  //   }
-  // };
-  try {
-    const messages = [];
-    if (systemMessage) {
-      messages.push({ role: 'system', content: systemMessage });
-    }
-    messages.push({ role: 'user', content: prompt });
+      messages.push({ role: 'user', content: prompt });
 
-    const response = await retryWithBackoff(async () => {
-      return axios.post(QWEN_API_ENDPOINT, {
-        model: 'qwen2.5-math-7b-instruct',
-        messages,
-        response_format,
-        temperature: 0.7,
-        max_tokens: -1,
-        stream: false
-      }, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: DEFAULT_TIMEOUT
+      const response = await retryWithBackoff(async () => {
+        return axios.post(QWEN_API_ENDPOINT, {
+          model: 'qwen2.5-math-7b-instruct',
+          messages,
+          response_format,
+          temperature: 0.7,
+          max_tokens: -1,
+          stream: false
+        }, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: AXIOS_TIMEOUT,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
+        });
       });
-    });
-    console.log('raw response');
-    console.log(response.data.choices[0].message.content);
-    // return response.data;
-    // if (!response.data?.choices?.[0]?.message) {
-    // if (!response.data) {
-    //   throw new Error('Invalid response structure');
-    // }
 
-    const jsonResponse = validateJSON(response.data.choices[0].message.content);
-    console.log('json response');
-    console.log(jsonResponse);
-    // Cache the successful response
-    // equationCache.set(cacheKey, JSON.stringify(jsonResponse));
-    
-    return JSON.stringify(jsonResponse);
-  } catch (error) {
-    console.error('Error processing equation:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    });
+      const content = response.data.choices[0].message.content;
+      // console.log('API Response:', content);
+      
+      const jsonResponse = schemaType === 'solve' ? 
+        parseAndValidateResponse(content) : 
+        validateJSON(content);
+      // console.log('JSON response:', jsonResponse);
+      
+      return JSON.stringify(jsonResponse);
+    } catch (error) {
+      console.error('API Error:', error.message);
+      if (error.response) {
+        console.error('API Response Error:', error.response.data);
+      }
+      throw error;
+    }
+  };
 
-    // Return graceful error response
-    const errorResponse = {
-      solution: [{
-        step: 1,
-        action: "Error occurred",
-        equation: "N/A",
-        explanation: `Error: ${error.message}. Please try again.`
-      }],
-      final_answer: "Processing error"
-    };
-
-    return JSON.stringify(errorResponse);
-  }
+  return queueQwenRequest(operation);
 }
 
 const validateJSON = (content) => {
@@ -362,38 +241,48 @@ function parseAndValidateResponse(content) {
 app.post('/api/solve', validateRequest, async (req, res, next) => {
   try {
     const { equation, visualization_type } = req.body;
+    console.log('Solving equation:', equation, 'Type:', visualization_type);
+    
     const prompt = `Solve this ${visualization_type} equation: ${equation}. Format the response exactly according to this schema: ${JSON.stringify(solveSchema)}`;
     
-    const solution = await callQwenAPI(prompt, solveSchema);
-    res.json(solution.choices[0].message.content);
+    const solution = await callQwenAPI(prompt, 'solve');
+    const parsedSolution = JSON.parse(solution);
+    res.json(parsedSolution);
   } catch (error) {
-    console.error('Error:', {
+    console.error('Solve Error:', {
       name: error.name,
       message: error.message,
       stack: error.stack,
       details: error.details
     });
-    next(error);
+    res.status(500).json({ 
+      error: 'Failed to process equation',
+      details: error.message 
+    });
   }
 });
 
 app.post('/api/visualize', validateRequest, async (req, res, next) => {
   try {
     const { equation, visualization_type } = req.body;
+    console.log('Visualizing equation:', equation, 'Type:', visualization_type);
+    
     const prompt = `Visualize this equation: ${equation} using ${visualization_type}. Format the response exactly according to the visualization schema for type: ${visualization_type}`;
     
-    const visualization = await callQwenAPI(prompt, visualizeSchemas);
-    // Parse the stringified response
+    const visualization = await callQwenAPI(prompt, 'visualize');
     const parsedVisualization = JSON.parse(visualization);
     res.json(parsedVisualization);
   } catch (error) {
-    console.error('Error:', {
+    console.error('Visualization Error:', {
       name: error.name,
       message: error.message,
       stack: error.stack,
       details: error.details
     });
-    next(error);
+    res.status(500).json({ 
+      error: 'Failed to visualize equation',
+      details: error.message 
+    });
   }
 });
 
