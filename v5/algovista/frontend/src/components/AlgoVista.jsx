@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InlineMath, BlockMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
+import Surface3DPlot from './Surface3DPlot';
 
 const VISUALIZATION_TYPES = {
   MULTIVARIABLE: 'Multivariable Functions and Gradient Fields',
@@ -124,7 +125,7 @@ const VisualizationDisplay = ({ visualizationData }) => {
     <div className="h-full bg-white p-4 rounded-lg">
       {/* Visualization content will be implemented based on type */}
       <div className="text-center text-gray-600">
-        Visualization component will be rendered here
+        <Surface3DPlot data={visualizationData} />
       </div>
     </div>
   );
@@ -141,38 +142,30 @@ const AlgoVista = () => {
     setError(null);
 
     try {
-      // Make parallel API calls for solve and visualize
-      const [solveResponse, visualizeResponse] = await Promise.all([
-        fetch('/api/solve', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        }),
-        fetch('/api/visualize', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        }),
-      ]);
+      const visualizeResponse = await fetch('/api/visualize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-      const [solveData, visualizeData] = await Promise.all([
-        solveResponse.json(),
-        visualizeResponse.json(),
-      ]);
-
-      if (!solveResponse.ok || !visualizeResponse.ok) {
-        throw new Error('Failed to process equation');
+      if (!visualizeResponse.ok) {
+        const errorData = await visualizeResponse.json();
+        throw new Error(errorData.message || 'Failed to process equation');
       }
 
-      setSolution(solveData);
+      const visualizeData = await visualizeResponse.json();
+      console.log("Visualization data:", visualizeData);
+      
+      if (!visualizeData || !visualizeData.function) {
+        throw new Error('Invalid visualization data received');
+      }
+
       setVisualization(visualizeData);
     } catch (err) {
       setError(err.message);
-      console.error('Error:', err);
+      console.error('Error details:', err);
     } finally {
       setLoading(false);
     }
@@ -202,7 +195,7 @@ const AlgoVista = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column - Solution Steps */}
           <Container>
-            <SolutionDisplay solution={solution} />
+            {/* <SolutionDisplay solution={solution} /> */}
           </Container>
 
           {/* Right Column - Visualization */}
