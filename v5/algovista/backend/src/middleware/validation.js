@@ -18,11 +18,11 @@ const validateRequest = (req, res, next) => {
   const { path } = req;
   const schemaKey = path.split('/').pop(); // Gets 'solve' or 'visualize' from path
   
-  console.log('Validating request:', {
-    path: req.path,
-    body: req.body,
-    schemaKey
-  });
+  // console.log('Validating request:', {
+  //   path: req.path,
+  //   body: req.body,
+  //   schemaKey
+  // });
 
   const schema = schemas[schemaKey];
   if (!schema) {

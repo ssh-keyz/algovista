@@ -125,7 +125,50 @@ function generateSolveFormat() {
             type: "string",
             minLength: 1
           }
-        }
+        },
+        "additionalProperties": false,
+        "examples": [
+          {
+            "solution": [
+              {
+                "step": 1,
+                "action": "Identify the function",
+                "equation": "$f(x) = x^2$",
+                "explanation": "\text{The given function is }$f(x) = x^2$\text{, which is a quadratic function.}"
+              }
+            ],
+            "final_answer": "$f(x) = x^2$ \text{ is a quadratic function representing an upward-opening parabola centered at the origin.}"
+          },
+          {
+            "solution": [
+              {
+                "step": 1,
+                "action": "\text{Define the function}",
+                "equation": "$f(x) = x^3$",
+                "explanation": "\text{The function is given as } $f(x) = x^3$"
+              },
+              {
+                "step": 2,
+                "action": "\text{Find the derivative of the function}",
+                "equation": "$f'(x) = 3x^2$",
+                "explanation": "\text{To find the derivative of } $f(x) = x^3$ \text{, we apply the power rule. The power rule states that if } $f(x) = x^n$ \text{, then } $f'(x) = nx^(n-1)$ \text{. Here, } $n = 3$ \text{, so } $f'(x) = 3x^2$"
+              },
+              {
+                "step": 3,
+                "action": "\text{Simplify the derivative (if necessary)}",
+                "equation": "$f'(x) = 3x^2$",
+                "explanation": "\text{The expression } $3x^2$ \text{ is already in its simplest form.}"
+              },
+              {
+                "step": 4,
+                "action": "\text{State the final answer}",
+                "equation": "$f'(x) = 3x^2$",
+                "explanation": "\text{The derivative of } $f(x) = x^3$ \text{ is } $f'(x) = 3x^2$"
+              }
+            ],
+            "final_answer": "$3x^2$"
+          }
+        ]
       }
     }
   };
