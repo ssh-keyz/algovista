@@ -173,20 +173,6 @@ function App() {
     setIsPopupOpen(!isPopupOpen);
   };
 
-  // const runBenchmarkWithCache = async () => {
-  //   const benchmark = new Benchmark();
-  //   const testEquation = equation;
-
-  //   console.log('Running benchmark with cache...');
-  //   const result = await benchmark.runBenchmarkSuite({
-  //     equation: testEquation,
-  //     cache
-  //   });
-
-  //   console.log('Benchmark results:', result);
-  //   console.log('Cache statistics:', cache.getStats());
-  // };
-
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>AlgoVista Math Solver</h1>
@@ -216,7 +202,6 @@ function App() {
         </div>
         {solution && <CalculusSolutionDisplay solution={solution} />}
       </PopupWindow>
-      {/* <button onClick={runBenchmarkWithCache}>Run Performance Comparison</button> */}
     </div>
   );
 }

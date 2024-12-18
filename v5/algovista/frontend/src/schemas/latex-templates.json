@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LaTeX Templates",
+  "description": "LaTeX templates for different types of mathematical visualizations",
+  "type": "object",
+  "properties": {
+    "multivariable_functions": {
+      "templates": {
+        "function_definition": "f(x,y) = z = {equation}",
+        "gradient": "\\nabla f = \\left(\\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\partial y}\\right)",
+        "critical_points": "\\begin{cases} \\frac{\\partial f}{\\partial x} = 0 \\\\ \\frac{\\partial f}{\\partial y} = 0 \\end{cases}",
+        "hessian": "H = \\begin{bmatrix} \\frac{\\partial^2 f}{\\partial x^2} & \\frac{\\partial^2 f}{\\partial x\\partial y} \\\\ \\frac{\\partial^2 f}{\\partial y\\partial x} & \\frac{\\partial^2 f}{\\partial y^2} \\end{bmatrix}",
+        "solution_steps": {
+          "identify": "\\text{Given function: } f(x,y) = {equation}",
+          "gradient_calc": "\\nabla f = ({dx}, {dy})",
+          "critical_points": "\\text{At critical points: } {critical_point_eqs}",
+          "classification": "\\text{Classification via Hessian: } \\det H = {determinant}"
+        }
+      }
+    },
+    "complex_integration": {
+      "templates": {
+        "function_definition": "f(z) = {equation}",
+        "contour": "\\gamma: z(t) = {parametric_equation}, t \\in [{t_start}, {t_end}]",
+        "residue": "\\text{Res}(f,z_0) = \\lim_{z \\to z_0} (z-z_0)f(z)",
+        "integral": "\\oint_\\gamma f(z)\\,dz = 2\\pi i \\sum_{k=1}^n \\text{Res}(f,z_k)",
+        "solution_steps": {
+          "identify": "\\text{Given complex function: } f(z) = {equation}",
+          "find_singularities": "\\text{Singularities at } z = {singularities}",
+          "residue_calc": "\\text{Residue calculation: } {residue_work}",
+          "apply_theorem": "\\text{By Residue Theorem: } {residue_sum}"
+        }
+      }
+    },
+    "differential_geometry": {
+      "templates": {
+        "surface_parametric": "\\begin{cases} x = x(u,v) \\\\ y = y(u,v) \\\\ z = z(u,v) \\end{cases}",
+        "first_fundamental": "E\\,du^2 + 2F\\,du\\,dv + G\\,dv^2",
+        "gaussian_curvature": "K = \\frac{LN-M^2}{EG-F^2}",
+        "mean_curvature": "H = \\frac{EN-2FM+GL}{2(EG-F^2)}",
+        "solution_steps": {
+          "parametrization": "\\text{Surface parametrization: } {equations}",
+          "metric_tensors": "\\text{First fundamental form coefficients: } (E,F,G)",
+          "curvature_calc": "\\text{Gaussian curvature: } K = {K_formula}",
+          "geodesics": "\\text{Geodesic equations: } {geodesic_eqs}"
+        }
+      }
+    },
+    "convergence": {
+      "templates": {
+        "sequence_definition": "a_n = {term}",
+        "series_definition": "\\sum_{n=1}^\\infty {term}",
+        "ratio_test": "\\lim_{n \\to \\infty} \\left|\\frac{a_{n+1}}{a_n}\\right| = L",
+        "root_test": "\\lim_{n \\to \\infty} \\sqrt[n]{|a_n|} = L",
+        "solution_steps": {
+          "identify": "\\text{Given sequence/series: } {definition}",
+          "convergence_test": "\\text{Applying {test_name}: } {test_work}",
+          "limit_calc": "\\text{Limit calculation: } {limit_work}",
+          "conclusion": "\\text{Series converges to } {sum}"
+        }
+      }
+    },
+    "vector_fields": {
+      "templates": {
+        "field_definition": "\\mathbf{F}(x,y) = {P}\\mathbf{i} + {Q}\\mathbf{j}",
+        "curl": "\\text{curl }\\mathbf{F} = \\left(\\frac{\\partial Q}{\\partial x} - \\frac{\\partial P}{\\partial y}\\right)\\mathbf{k}",
+        "divergence": "\\text{div }\\mathbf{F} = \\frac{\\partial P}{\\partial x} + \\frac{\\partial Q}{\\partial y}",
+        "solution_steps": {
+          "identify": "\\text{Given vector field: } \\mathbf{F}(x,y) = {field}",
+          "curl_calc": "\\text{Curl calculation: } {curl_work}",
+          "divergence_calc": "\\text{Divergence calculation: } {div_work}",
+          "critical_points": "\\text{Critical points: } {critical_points}"
+        }
+      }
+    }
+  }

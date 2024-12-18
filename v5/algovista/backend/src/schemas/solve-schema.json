@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mathematical Solution State",
+  "description": "Schema for representing a step-by-step mathematical solution with explanations",
+  "type": "object",
+  "required": [
+    "solution",
+    "final_answer"
+  ],
+  "properties": {
+    "solution": {
+      "type": "array",
+      "description": "Array of solution steps",
+      "items": {
+        "type": "object",
+        "required": [
+          "step",
+          "action",
+          "equation",
+          "explanation"
+        ],
+        "properties": {
+          "step": {
+            "type": "integer",
+            "description": "Step number in the solution sequence",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "description": "Description of the action being performed in this step",
+            "minLength": 1
+          },
+          "equation": {
+            "type": "string",
+            "description": "LaTeX formatted mathematical equation (without surrounding $ signs)",
+            "minLength": 1
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Detailed explanation of the step, may include LaTeX notation",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "final_answer": {
+      "type": "string",
+      "description": "Final conclusion or answer, may include LaTeX notation",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false
+}

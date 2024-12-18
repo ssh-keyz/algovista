@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Visualization Schemas",
+  "description": "Collection of schemas for different mathematical visualization types",
+  "type": "object",
+  "properties": {
+    "input_schema": {
+      "type": "object",
+      "required": ["visualization_type", "equation"],
+      "properties": {
+        "visualization_type": {
+          "type": "string",
+          "enum": [
+            "Multivariable Functions and Gradient Fields",
+            "Complex Integration and Residue Theory",
+            "Differential Geometry (Manifolds)",
+            "Convergence of Series and Sequences",
+            "Vector Fields and Flow Lines"
+          ]
+        },
+        "equation": {
+          "type": "string"
+        },
+        "additional_params": {
+          "type": "object"
+        }
+      }
+    },
+    "visualization_schemas": {
+      "multivariable_functions": {
+        "required": ["function", "visualization_config", "mathematical_properties"],
+        "properties": {
+          "function": {
+            "type": "object",
+            "required": ["raw", "parsed", "variables"],
+            "properties": {
+              "raw": { "type": "string" },
+              "parsed": { "type": "string" },
+              "variables": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "visualization_config": {
+            "type": "object",
+            "required": ["ranges", "resolution", "view_angles"],
+            "properties": {
+              "ranges": {
+                "type": "object",
+                "properties": {
+                  "x": { "type": "array", "items": { "type": "number" } },
+                  "y": { "type": "array", "items": { "type": "number" } },
+                  "z": { "type": "array", "items": { "type": "number" } }
+                }
+              },
+              "resolution": {
+                "type": "object",
+                "properties": {
+                  "x": { "type": "integer" },
+                  "y": { "type": "integer" }
+                }
+              },
+              "view_angles": {
+                "type": "object",
+                "properties": {
+                  "theta": { "type": "number" },
+                  "phi": { "type": "number" }
+                }
+              }
+            }
+          },
+          "mathematical_properties": {
+            "type": "object",
+            "properties": {
+              "critical_points": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": { "type": "number" },
+                    "y": { "type": "number" },
+                    "z": { "type": "number" },
+                    "type": { "type": "string" }
+                  }
+                }
+              },
+              "gradient": {
+                "type": "object",
+                "properties": {
+                  "dx": { "type": "string" },
+                  "dy": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "complex_integration": {
+        "required": ["complex_function", "visualization_config", "integration_data"],
+        "properties": {
+          "complex_function": {
+            "type": "object",
+            "properties": {
+              "raw": { "type": "string" },
+              "parsed": { "type": "string" },
+              "singularities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "point": { "type": "string" },
+                    "type": { "type": "string" },
+                    "residue": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "visualization_config": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "object",
+                "properties": {
+                  "re": { "type": "array", "items": { "type": "number" } },
+                  "im": { "type": "array", "items": { "type": "number" } }
+                }
+              },
+              "contour": {
+                "type": "object",
+                "properties": {
+                  "path": { "type": "string" },
+                  "direction": { "type": "string" }
+                }
+              }
+            }
+          },
+          "integration_data": {
+            "type": "object",
+            "properties": {
+              "value": { "type": "string" },
+              "method": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

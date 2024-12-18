@@ -1,0 +1,127 @@
+/* Custom theme variables */
+:root {
+  /* AlgoVista specific colors */
+  --algovista-blue: 201 100% 50%;
+  --algovista-green: 142 71% 45%;
+  --algovista-red: 0 84% 60%;
+  --algovista-yellow: 45 93% 47%;
+  --algovista-purple: 252 56% 57%;
+
+  /* Visualization colors */
+  --graph-color-1: hsl(var(--algovista-blue));
+  --graph-color-2: hsl(var(--algovista-green));
+  --graph-color-3: hsl(var(--algovista-purple));
+  --graph-color-4: hsl(var(--algovista-yellow));
+  --graph-color-5: hsl(var(--algovista-red));
+
+  /* Mathematical concept specific colors */
+  --multivariable-gradient: linear-gradient(135deg, 
+    hsl(201, 100%, 50%) 0%,
+    hsl(201, 100%, 40%) 100%
+  );
+  
+  --complex-gradient: linear-gradient(135deg,
+    hsl(252, 56%, 57%) 0%,
+    hsl(252, 56%, 47%) 100%
+  );
+  
+  --differential-gradient: linear-gradient(135deg,
+    hsl(142, 71%, 45%) 0%,
+    hsl(142, 71%, 35%) 100%
+  );
+  
+  --convergence-gradient: linear-gradient(135deg,
+    hsl(45, 93%, 47%) 0%,
+    hsl(45, 93%, 37%) 100%
+  );
+  
+  --vector-gradient: linear-gradient(135deg,
+    hsl(0, 84%, 60%) 0%,
+    hsl(0, 84%, 50%) 100%
+  );
+
+  /* Component specific styles */
+  --solution-step-border: 1px solid hsl(var(--border));
+  --solution-step-radius: var(--radius);
+  --solution-step-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  /* Visualization specific styles */
+  --plot-background: hsl(var(--background));
+  --plot-grid-color: hsl(var(--muted));
+  --plot-axis-color: hsl(var(--foreground));
+  --plot-text-color: hsl(var(--foreground));
+}
+
+/* Dark theme overrides */
+.dark {
+  --plot-background: hsl(var(--background));
+  --plot-grid-color: hsl(var(--muted));
+  --plot-axis-color: hsl(var(--muted-foreground));
+  --plot-text-color: hsl(var(--foreground));
+}
+
+/* Visualization type specific classes */
+.multivariable {
+  background: var(--multivariable-gradient);
+}
+
+.complex {
+  background: var(--complex-gradient);
+}
+
+.differential {
+  background: var(--differential-gradient);
+}
+
+.convergence {
+  background: var(--convergence-gradient);
+}
+
+.vector {
+  background: var(--vector-gradient);
+}
+
+/* Solution step styles */
+.solution-step {
+  border: var(--solution-step-border);
+  border-radius: var(--solution-step-radius);
+  box-shadow: var(--solution-step-shadow);
+}
+
+/* Graph and plot styles */
+.plot-container {
+  background-color: var(--plot-background);
+}
+
+.plot-grid {
+  stroke: var(--plot-grid-color);
+}
+
+.plot-axis {
+  stroke: var(--plot-axis-color);
+}
+
+.plot-text {
+  fill: var(--plot-text-color);
+}
+
+/* Responsive font sizes for mathematical content */
+@media (min-width: 640px) {
+  .math-display {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .math-display {
+    font-size: 1.25rem;
+  }
+}
+
+/* High contrast theme support */
+@media (prefers-contrast: high) {
+  :root {
+    --solution-step-border: 2px solid hsl(var(--foreground));
+    --solution-step-shadow: none;
+  }
+}
