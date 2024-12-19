@@ -6,8 +6,6 @@ const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const path = require('path');
 const axios = require('axios');
-const http = require('http');
-const https = require('https');
 const solveSchema = require('./schemas/solve-schema.json');
 const visualizeSchemas = require('./schemas/visualization-schemas.json');
 const { 
@@ -29,33 +27,6 @@ const QWEN_API_ENDPOINT = process.env.QWEN_API_ENDPOINT;
 const DEFAULT_TIMEOUT = 1800000; // 30 minutes
 const AXIOS_TIMEOUT = 1800000; // 30 minutes for axios calls
 const MAX_RETRIES = 2;
-
-// Configure HTTP and HTTPS agents with keep-alive
-const httpAgent = new http.Agent({
-  keepAlive: true,
-  keepAliveMsecs: 1000,
-  maxSockets: 100,
-  timeout: AXIOS_TIMEOUT
-});
-
-const httpsAgent = new https.Agent({
-  keepAlive: true,
-  keepAliveMsecs: 1000,
-  maxSockets: 100,
-  timeout: AXIOS_TIMEOUT
-});
-
-// Create axios instance with default config
-const axiosInstance = axios.create({
-  timeout: AXIOS_TIMEOUT,
-  maxContentLength: 50 * 1024 * 1024, // 50MB
-  maxBodyLength: 50 * 1024 * 1024, // 50MB
-  httpAgent,
-  httpsAgent,
-  headers: {
-    'Connection': 'keep-alive'
-  }
-});
 
 // Queue for managing QWEN API requests
 let isProcessing = false;
@@ -148,13 +119,18 @@ async function callQwenAPI(prompt, schemaType, systemMessage = null) {
       messages.push({ role: 'user', content: prompt });
 
       const response = await retryWithBackoff(async () => {
-        return axiosInstance.post(QWEN_API_ENDPOINT, {
+        return axios.post(QWEN_API_ENDPOINT, {
           model: 'qwen2.5-math-7b-instruct',
           messages,
           response_format,
           temperature: 0.7,
           max_tokens: -1,
           stream: false
+        }, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: AXIOS_TIMEOUT,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
         });
       });
 
