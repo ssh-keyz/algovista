@@ -105,6 +105,8 @@ const SolutionStep = ({ step, action, equation, explanation }) => {
 const SolutionDisplay = ({ solution }) => {
   if (!solution) return null;
 
+  console.log('Solution Data:', JSON.stringify(solution, null, 2));
+
   return (
     <div className="space-y-4">
       {solution.solution.map((step, index) => (
@@ -120,6 +122,8 @@ const SolutionDisplay = ({ solution }) => {
 
 const VisualizationDisplay = ({ visualizationData }) => {
   if (!visualizationData) return null;
+
+  console.log('Visualization Data:', JSON.stringify(visualizationData, null, 2));
 
   return (
     <div className="h-full bg-white p-4 rounded-lg">
