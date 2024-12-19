@@ -28,11 +28,26 @@ const DEFAULT_TIMEOUT = 1800000; // 30 minutes
 const AXIOS_TIMEOUT = 1800000; // 30 minutes for axios calls
 const MAX_RETRIES = 2;
 
-// Queue for managing QWEN API requests
+/**
+ * Queue Management System for LLM API Requests
+ * 
+ * This implementation addresses several critical challenges in LLM API integration:
+ * 1. Rate limiting: Prevents overwhelming the API with concurrent requests
+ * 2. Request ordering: Maintains FIFO order for fairness
+ * 3. Resource management: Controls memory usage by processing one request at a time
+ * 4. Error isolation: Prevents cascading failures
+ */
 let isProcessing = false;
 const requestQueue = [];
 
-// Function to process the queue
+/**
+ * Processes queued LLM API requests sequentially
+ * This pattern ensures:
+ * - Controlled concurrency
+ * - Proper error handling
+ * - Request isolation
+ * - Memory efficiency
+ */
 async function processQueue() {
   if (isProcessing || requestQueue.length === 0) return;
   
@@ -46,12 +61,20 @@ async function processQueue() {
     reject(error);
   } finally {
     isProcessing = false;
-    // Process next request if any
     processQueue();
   }
 }
 
-// Wrapper for QWEN API calls to use queue
+/**
+ * Queues an LLM API request for processing
+ * @param {Function} operation - Async function containing the API call
+ * @returns {Promise} Resolves with API response or rejects with error
+ * 
+ * Key features:
+ * - Promise-based interface for async operations
+ * - Maintains request order
+ * - Provides isolation between requests
+ */
 async function queueQwenRequest(operation) {
   return new Promise((resolve, reject) => {
     requestQueue.push({ operation, resolve, reject });
@@ -76,7 +99,18 @@ if (!QWEN_API_ENDPOINT) {
   process.exit(1);
 }
 
-// Retry mechanism with exponential backoff
+/**
+ * Implements exponential backoff retry mechanism for LLM API calls
+ * 
+ * @param {Function} operation - The API operation to retry
+ * @param {number} maxRetries - Maximum number of retry attempts
+ * 
+ * Benefits:
+ * - Handles transient API failures gracefully
+ * - Prevents overwhelming API during recovery
+ * - Improves request success rate
+ * - Implements best practices for API interaction
+ */
 async function retryWithBackoff(operation, maxRetries = MAX_RETRIES) {
   let lastError;
   for (let i = 0; i < maxRetries; i++) {
@@ -84,7 +118,8 @@ async function retryWithBackoff(operation, maxRetries = MAX_RETRIES) {
       return await operation();
     } catch (error) {
       lastError = error;
-      const delay = Math.min(1000 * Math.pow(2, i), 10000); // Max 10 second delay
+      // Exponential backoff with max delay of 10 seconds
+      const delay = Math.min(1000 * Math.pow(2, i), 10000);
       console.log(`Attempt ${i + 1} failed, retrying in ${delay}ms...`, error.message);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -107,17 +142,35 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// Helper function for API calls
+/**
+ * Core LLM API interaction function
+ * 
+ * @param {string} prompt - The prompt to send to the LLM
+ * @param {string} schemaType - Type of response schema to validate against
+ * @param {string} systemMessage - Optional system message for context
+ * 
+ * Key features:
+ * 1. Structured prompt formatting
+ * 2. Response validation
+ * 3. Error handling
+ * 4. Queue management
+ * 5. Retry logic
+ * 6. Schema enforcement
+ */
 async function callQwenAPI(prompt, schemaType, systemMessage = null) {
   const operation = async () => {
     try {
+      // Format response according to schema type
       const response_format = schemaType === 'solve' ? generateSolveFormat() : generateVisualizationFormat();
+      
+      // Construct messages array with optional system context
       const messages = [];
       if (systemMessage) {
         messages.push({ role: 'system', content: systemMessage });
       }
       messages.push({ role: 'user', content: prompt });
 
+      // Make API call with retry mechanism
       const response = await retryWithBackoff(async () => {
         return axios.post(QWEN_API_ENDPOINT, {
           model: 'qwen2.5-math-7b-instruct',
@@ -134,13 +187,11 @@ async function callQwenAPI(prompt, schemaType, systemMessage = null) {
         });
       });
 
+      // Extract and validate response
       const content = response.data.choices[0].message.content;
-      // console.log('API Response:', content);
-      
       const jsonResponse = schemaType === 'solve' ? 
         parseAndValidateResponse(content) : 
         validateJSON(content);
-      // console.log('JSON response:', jsonResponse);
       
       return JSON.stringify(jsonResponse);
     } catch (error) {
@@ -152,16 +203,29 @@ async function callQwenAPI(prompt, schemaType, systemMessage = null) {
     }
   };
 
+  // Queue the operation
   return queueQwenRequest(operation);
 }
 
+/**
+ * Response validation and normalization
+ * 
+ * @param {string|object} content - Raw API response
+ * @returns {object} Validated and normalized JSON response
+ * 
+ * Handles common LLM response issues:
+ * 1. Malformed JSON
+ * 2. Missing required fields
+ * 3. Inconsistent formatting
+ * 4. Schema validation
+ */
 const validateJSON = (content) => {
-  // If content is already an object, skip parsing
+  // Handle both string and object inputs
   let parsedJSON;
   if (typeof content === 'object' && content !== null) {
     parsedJSON = content;
   } else {
-    // Clean up common formatting issues
+    // Clean up common LLM response formatting issues
     const cleanContent = content
       .replace(/\n\s*/g, ' ')  // Replace newlines and following spaces with single space
       .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
@@ -171,50 +235,24 @@ const validateJSON = (content) => {
     parsedJSON = JSON.parse(cleanContent);
   }
 
-  // Validate required fields and structure
+  // Define and validate required response structure
   const requiredFields = {
     function: ['raw', 'parsed', 'variables'],
     visualization_config: ['ranges', 'resolution', 'view_angles'],
     mathematical_properties: ['gradient']
   };
 
-  // Check top-level fields
+  // Validate top-level fields and their required subfields
   for (const field of Object.keys(requiredFields)) {
     if (!parsedJSON[field]) {
       throw new Error(`Missing required top-level field: ${field}`);
     }
-  }
-
-  // Check function fields
-  for (const field of requiredFields.function) {
-    if (!parsedJSON.function[field]) {
-      throw new Error(`Missing required field in function: ${field}`);
-    }
-  }
-
-  // Check visualization_config fields
-  const config = parsedJSON.visualization_config;
-  for (const field of requiredFields.visualization_config) {
-    if (!config[field]) {
-      throw new Error(`Missing required field in visualization_config: ${field}`);
-    }
-  }
-
-  // Check ranges has x and y
-  if (!config.ranges.x || !config.ranges.y) {
-    throw new Error('Ranges must include both x and y arrays');
-  }
-
-  // Check resolution has x and y
-  if (!config.resolution.x || !config.resolution.y) {
-    throw new Error('Resolution must include both x and y values');
-  }
-
-  // Check mathematical_properties
-  const props = parsedJSON.mathematical_properties;
-  for (const field of requiredFields.mathematical_properties) {
-    if (!props[field]) {
-      throw new Error(`Missing required field in mathematical_properties: ${field}`);
+    
+    // Validate subfields for each top-level field
+    for (const subfield of requiredFields[field]) {
+      if (!parsedJSON[field][subfield]) {
+        throw new Error(`Missing required field in ${field}: ${subfield}`);
+      }
     }
   }
 
