@@ -1,160 +1,242 @@
-"use client";
-
-import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Maximize2 } from 'lucide-react';
 
 const Surface3DPlot = ({ data }) => {
-  console.log('Initial Surface3DPlot data:', JSON.stringify(data, null, 2));
-  const [plotData, setPlotData] = useState([]);
-  const [rotation, setRotation] = useState({ x: 45, y: 45, z: 0 });
+  const [rotation, setRotation] = useState({ x: 45, y: 45, z: 30 });
+  const [points, setPoints] = useState([]);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const containerRef = useRef(null);
+  const debounceTimerRef = useRef(null);
+  
+  // Base scale factor - will be adjusted based on container size
+  const baseScale = 40;
 
   useEffect(() => {
-    if (!data || !data.visualization_config) return;
-
-    const { ranges, resolution } = data.visualization_config;
-    const points = generateSurfacePoints(data.equation, ranges, resolution);
-    console.log(data);
-    setPlotData(points);
-  }, [data]);
-
-  const generateSurfacePoints = (equation, ranges, resolution) => {
-    const points = [];
-    const { x: xRange, y: yRange } = ranges;
-    const { x: xRes, y: yRes } = resolution;
-
-    const dx = (xRange[1] - xRange[0]) / xRes;
-    const dy = (yRange[1] - yRange[0]) / yRes;
-
-    for (let i = 0; i < xRes; i++) {
-      const row = [];
-      const x = xRange[0] + i * dx;
-      
-      for (let j = 0; j < yRes; j++) {
-        const y = yRange[0] + j * dy;
-        // Evaluate the equation - this is a simplified example
-        // In practice, you'd need to safely evaluate the mathematical expression
-        const z = evaluateEquation(equation, x, y);
-        row.push({ x, y, z });
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        setDimensions({
+          width: width - 32, // Account for padding
+          height: Math.min(height, width * 0.75) // Maintain aspect ratio
+        });
       }
-      points.push(row);
+    };
+
+    updateDimensions();
+    
+    const observer = new ResizeObserver(updateDimensions);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
     }
 
-    return points;
+    return () => observer.disconnect();
+  }, []); // Only run once on mount
+
+  useEffect(() => {
+    if (!data) return;
+    generatePoints();
+  }, [data, rotation]); // Only regenerate points when data or rotation changes
+
+  const getScale = (viewportWidth) => {
+    return (baseScale * viewportWidth) / 800; // Scale relative to original 800px width
   };
 
-  const evaluateEquation = (equation, x, y) => {
+  const generatePoints = () => {
+    if (!data?.visualization_config?.ranges || !data?.visualization_config?.resolution) return;
+
+    const { ranges, resolution } = data.visualization_config;
+    const newPoints = [];
+    
+    const xStep = (ranges.x[1] - ranges.x[0]) / resolution.x;
+    const yStep = (ranges.y[1] - ranges.y[0]) / resolution.y;
+
+    // Generate grid points
+    for (let x = ranges.x[0]; x <= ranges.x[1]; x += xStep) {
+      const row = [];
+      for (let y = ranges.y[0]; y <= ranges.y[1]; y += yStep) {
+        const z = evaluateFunction(x, y);
+        const transformed = transform3DTo2D(x, y, z, dimensions.width, dimensions.height);
+        row.push(transformed);
+      }
+      newPoints.push(row);
+    }
+
+    setPoints(newPoints);
+  };
+
+  const evaluateFunction = (x, y) => {
     try {
-      // This is a placeholder - you'll need to implement proper equation evaluation
-      // Consider using math.js or a similar library for safe evaluation
-      return x * x + y * y; // Example for z = x² + y²
+      return Math.pow(x, 2) + Math.pow(y, 2);
     } catch (error) {
-      console.error('Error evaluating equation:', error);
+      console.error('Error evaluating function:', error);
       return 0;
     }
   };
 
-  const handleRotationChange = (axis, value) => {
-    setRotation(prev => ({
-      ...prev,
-      [axis]: value
-    }));
-  };
-
-  const transformPoint = (point) => {
-    // Apply 3D rotation transformations
-    // This is a simplified transformation - you'll need proper 3D matrix transformations
-    const { x, y, z } = point;
+  const transform3DTo2D = useCallback((x, y, z, width, height) => {
     const radX = (rotation.x * Math.PI) / 180;
     const radY = (rotation.y * Math.PI) / 180;
-    
-    // Basic rotation around X and Y axes
-    const rotX = {
-      x: x,
-      y: y * Math.cos(radX) - z * Math.sin(radX),
-      z: y * Math.sin(radX) + z * Math.cos(radX)
-    };
-    
-    const rotXY = {
-      x: rotX.x * Math.cos(radY) + rotX.z * Math.sin(radY),
-      y: rotX.y,
-      z: -rotX.x * Math.sin(radY) + rotX.z * Math.cos(radY)
-    };
+    const radZ = (rotation.z * Math.PI) / 180;
 
-    return rotXY;
+    // Apply 3D rotations
+    let x1 = x;
+    let y1 = y * Math.cos(radX) - z * Math.sin(radX);
+    let z1 = y * Math.sin(radX) + z * Math.cos(radX);
+
+    let x2 = x1 * Math.cos(radY) + z1 * Math.sin(radY);
+    let y2 = y1;
+    let z2 = -x1 * Math.sin(radY) + z1 * Math.cos(radY);
+
+    // Apply Z rotation
+    let x3 = x2 * Math.cos(radZ) - y2 * Math.sin(radZ);
+    let y3 = x2 * Math.sin(radZ) + y2 * Math.cos(radZ);
+
+    // Project to 2D
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const scale = getScale(width);
+    
+    return {
+      x: centerX + x3 * scale,
+      y: centerY + y3 * scale,
+      z: z2,
+      originalZ: z
+    };
+  }, [rotation]);
+
+  const getColor = (z) => {
+    const maxZ = 50;
+    const normalizedZ = Math.min(Math.max(z / maxZ, 0), 1);
+    const hue = 240 - normalizedZ * 180;
+    return `hsl(${hue}, 70%, 50%)`;
   };
 
-  return (
-    <div className="w-full max-w-4xl p-4">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">3D Surface Plot</h2>
-        
-        {/* Rotation Controls */}
-        <div className="mb-6 space-y-4">
-          <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium">X Rotation:</label>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              value={rotation.x}
-              onChange={(e) => handleRotationChange('x', parseInt(e.target.value))}
-              className="w-48"
-            />
-            <span className="text-sm">{rotation.x}°</span>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium">Y Rotation:</label>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              value={rotation.y}
-              onChange={(e) => handleRotationChange('y', parseInt(e.target.value))}
-              className="w-48"
-            />
-            <span className="text-sm">{rotation.y}°</span>
-          </div>
-        </div>
+  const handleRotationChange = (axis, value) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      setRotation(prev => ({
+        ...prev,
+        [axis]: value
+      }));
+    }, 50); // 50ms debounce
+  };
 
-        {/* 3D Plot Viewport */}
-        <div className="h-96 w-full bg-gray-50 rounded border border-gray-200">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart margin={{ top: 20, right: 30, left: 20, bottom: 10 }}>
-              {plotData.map((row, i) => (
-                <Line
-                  key={i}
-                  type="monotone"
-                  data={row.map(point => transformPoint(point))}
-                  dataKey="z"
-                  stroke="#8884d8"
-                  dot={false}
-                  isAnimationActive={false}
+  const MemoizedPlot = useMemo(() => {
+    return ({ width, height }) => (
+      <svg width={width} height={height} className="bg-gray-50 rounded-lg">
+        {points.map((row, i) => (
+          <g key={`x-${i}`}>
+            {row.slice(1).map((point, j) => {
+              const prev = row[j];
+              return (
+                <line
+                  key={`x-${i}-${j}`}
+                  x1={prev.x}
+                  y1={prev.y}
+                  x2={point.x}
+                  y2={point.y}
+                  stroke={getColor(point.originalZ)}
+                  strokeWidth="1"
+                  opacity={0.7}
                 />
-              ))}
-              <CartesianGrid />
-              <XAxis dataKey="x" />
-              <YAxis />
-              <Tooltip />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+              );
+            })}
+          </g>
+        ))}
 
-        {/* Critical Points */}
-        {data?.mathematical_properties?.critical_points && (
-          <div className="mt-4">
-            <h3 className="font-medium text-lg mb-2">Critical Points</h3>
-            <ul className="list-disc pl-5">
-              {data.mathematical_properties.critical_points.map((point, index) => (
-                <li key={index}>
-                  ({point.x}, {point.y}, {point.z}) - {point.type}
-                </li>
-              ))}
-            </ul>
+        {points[0]?.map((_, colIndex) => (
+          <g key={`y-${colIndex}`}>
+            {points.slice(1).map((row, i) => {
+              const prev = points[i][colIndex];
+              const point = row[colIndex];
+              return (
+                <line
+                  key={`y-${colIndex}-${i}`}
+                  x1={prev.x}
+                  y1={prev.y}
+                  x2={point.x}
+                  y2={point.y}
+                  stroke={getColor(point.originalZ)}
+                  strokeWidth="1"
+                  opacity={0.7}
+                />
+              );
+            })}
+          </g>
+        ))}
+      </svg>
+    );
+  }, [points]);
+
+  if (!data) {
+    return <div>Loading...</div>;
+  }
+
+  const Controls = () => (
+    <div className="mb-4 space-y-2">
+      {['x', 'y', 'z'].map(axis => (
+        <div key={axis} className="flex items-center space-x-4">
+          <label className="w-24">{axis.toUpperCase()} Rotation:</label>
+          <input
+            type="range"
+            min="0"
+            max="360"
+            value={rotation[axis]}
+            onChange={(e) => handleRotationChange(axis, parseInt(e.target.value))}
+            className="w-48"
+          />
+          <span>{rotation[axis]}°</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <Card className="w-full">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>3D Surface Plot: {data.function?.raw || 'Loading...'}</CardTitle>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon">
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-7xl w-[90vw]">
+            <DialogTitle>
+              3D Surface Plot: {data.function?.raw || 'Loading...'}
+            </DialogTitle>
+            <DialogDescription>
+              Expanded view with interactive rotation controls
+            </DialogDescription>
+            <div className="space-y-4">
+              <Controls />
+              <MemoizedPlot width={Math.min(1200, window.innerWidth * 0.8)} height={Math.min(900, window.innerHeight * 0.6)} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent ref={containerRef}>
+        <Controls />
+        <MemoizedPlot width={dimensions.width} height={dimensions.height} />
+        
+        {/* Display mathematical properties if available */}
+        {data.mathematical_properties?.gradient && (
+          <div className="mt-4 p-4 bg-gray-50 rounded">
+            <h3 className="font-medium mb-2">Gradient:</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>∂f/∂x = {data.mathematical_properties.gradient.dx}</div>
+              <div>∂f/∂y = {data.mathematical_properties.gradient.dy}</div>
+            </div>
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

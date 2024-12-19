@@ -151,15 +151,27 @@ const AlgoVista = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        keepalive: true,
+        signal: AbortSignal.timeout(1800000), // 30 minute timeout
       }).catch(err => ({ ok: false, error: err }));
 
       // Handle solve response
       if (solveResponse.ok) {
         try {
-          const solveData = await solveResponse.json();
-          if (!solveData || !Array.isArray(solveData.solution)) {
-            throw new Error('Invalid solution data received');
+          const reader = solveResponse.body.getReader();
+          const decoder = new TextDecoder();
+          let result = '';
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            result += decoder.decode(value, { stream: true });
           }
+          
+          const solveData = JSON.parse(result);
+          // if (!solveData || !Array.isArray(solveData.solution)) {
+          //   throw new Error('Invalid solution data received');
+          // }
           setSolution(solveData);
         } catch (err) {
           console.error('Error parsing solve data:', err);
@@ -184,15 +196,27 @@ const AlgoVista = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        keepalive: true,
+        signal: AbortSignal.timeout(1800000), // 30 minute timeout
       }).catch(err => ({ ok: false, error: err }));
 
       // Handle visualize response
       if (visualizeResponse.ok) {
         try {
-          const visualizeData = await visualizeResponse.json();
-          if (!visualizeData || !visualizeData.function) {
-            throw new Error('Invalid visualization data received');
+          const reader = visualizeResponse.body.getReader();
+          const decoder = new TextDecoder();
+          let result = '';
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            result += decoder.decode(value, { stream: true });
           }
+          
+          const visualizeData = JSON.parse(result);
+          // if (!visualizeData || !visualizeData.function) {
+          //   throw new Error('Invalid visualization data received');
+          // }
           setVisualization(visualizeData);
         } catch (err) {
           console.error('Error parsing visualization data:', err);
