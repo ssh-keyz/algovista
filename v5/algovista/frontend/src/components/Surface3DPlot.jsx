@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Surface3DPlot = ({ data }) => {
+  console.log('Initial Surface3DPlot data:', JSON.stringify(data, null, 2));
   const [plotData, setPlotData] = useState([]);
   const [rotation, setRotation] = useState({ x: 45, y: 45, z: 0 });
 
@@ -12,6 +13,7 @@ const Surface3DPlot = ({ data }) => {
 
     const { ranges, resolution } = data.visualization_config;
     const points = generateSurfacePoints(data.equation, ranges, resolution);
+    console.log(data);
     setPlotData(points);
   }, [data]);
 
