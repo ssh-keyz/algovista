@@ -79,6 +79,13 @@ const EquationInput = ({ onSubmit }) => {
   );
 };
 
+/**
+ * SolutionStep Component
+ * Key feature for math education:
+ * - Renders step-by-step explanations using LaTeX
+ * - Bridges formal mathematics with natural language
+ * - Demonstrates AI's ability to break down complex concepts
+ */
 const SolutionStep = ({ step, action, equation, explanation }) => {
   const renderLatex = (text) => {
     if (!text) return '';
@@ -102,6 +109,10 @@ const SolutionStep = ({ step, action, equation, explanation }) => {
   );
 };
 
+/**
+ * SolutionDisplay Component
+ * - Structured, formal notation with explanations
+ */
 const SolutionDisplay = ({ solution }) => {
   if (!solution) return null;
 
@@ -120,6 +131,13 @@ const SolutionDisplay = ({ solution }) => {
   );
 };
 
+/**
+ * VisualizationDisplay Component
+ * Mathematical visualization features:
+ * - Dynamic 3D rendering of mathematical concepts
+ * - Visually learn complex functions
+ * - Bridge between abstract math and concrete representation
+ */
 const VisualizationDisplay = ({ visualizationData }) => {
   if (!visualizationData) return null;
 
@@ -135,6 +153,14 @@ const VisualizationDisplay = ({ visualizationData }) => {
   );
 };
 
+/**
+ * handleEquationSubmit
+ * Core GPT wrapper implementation:
+ * - Streams responses for real-time feedback
+ * - Handles both solution generation and visualization
+ * - Parallel endpoint pipelines
+ * - Error handling, timeout management
+ */
 const AlgoVista = () => {
   const [loading, setLoading] = useState({ solve: false, visualize: false });
   const [error, setError] = useState(null);
