@@ -1,3 +1,86 @@
+/**
+ * Surface3DPlot.jsx
+ * 
+ * A sophisticated React component for rendering LLM-generated 3D mathematical surface plots.
+ * This component transforms the mathematical output from LLMs into interactive, visually
+ * appealing 3D visualizations using SVG-based rendering with dynamic color gradients.
+ * 
+ * Key Features:
+ * - Interactive 3D rotation and manipulation
+ * - Dynamic color mapping based on z-values
+ * - Responsive design with automatic scaling
+ * - Expandable dialog view for detailed analysis
+ * - Real-time rotation controls
+ * - Zoom and fit-to-view capabilities
+ * - Gradient information display
+ * 
+ * Expected LLM Response Schema:
+ * {
+ *   function: {
+ *     raw: string,           // Original function expression
+ *     parsed: string,        // Parsed computational form
+ *     variables: string[]    // List of variables used
+ *   },
+ *   visualization_config: {
+ *     ranges: {
+ *       x: [number, number], // Domain range for x
+ *       y: [number, number]  // Domain range for y
+ *     },
+ *     resolution: {
+ *       x: number,          // Number of points along x-axis
+ *       y: number           // Number of points along y-axis
+ *     },
+ *     view_angles: {        // Initial viewing angles
+ *       theta: number,
+ *       phi: number
+ *     }
+ *   },
+ *   mathematical_properties: {
+ *     gradient: {
+ *       dx: string,         // Partial derivative with respect to x
+ *       dy: string          // Partial derivative with respect to y
+ *     }
+ *   }
+ * }
+ * 
+ * Technical Implementation:
+ * - Uses SVG for rendering to ensure wide compatibility
+ * - Implements matrix transformations for 3D to 2D projection
+ * - Employs requestAnimationFrame for smooth rotations
+ * - Uses ResizeObserver for responsive scaling
+ * - Implements touch support for mobile interaction
+ * - Memoizes heavy computations for performance
+ * 
+ * Integration Notes:
+ * - Expects structured output from mathematical LLMs
+ * - Handles real-time user interaction
+ * - Provides expandable view for detailed analysis
+ * - Supports touch devices for mobile accessibility
+ * - Auto-scales based on container size
+ * - Provides mathematical context through gradient display
+ * 
+ * Example Usage:
+ * ```jsx
+ * <Surface3DPlot
+ *   data={{
+ *     function: {
+ *       raw: "z = x^2 + y^2",
+ *       parsed: "Math.pow(x, 2) + Math.pow(y, 2)",
+ *       variables: ["x", "y"]
+ *     },
+ *     visualization_config: {
+ *       ranges: { x: [-5, 5], y: [-5, 5] },
+ *       resolution: { x: 50, y: 50 },
+ *       view_angles: { theta: 45, phi: 45 }
+ *     },
+ *     mathematical_properties: {
+ *       gradient: { dx: "2x", dy: "2y" }
+ *     }
+ *   }}
+ * />
+ * ```
+ */
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from '@/components/ui/dialog';
